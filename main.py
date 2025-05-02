@@ -12,28 +12,21 @@ import urllib.parse
 
 app = FastAPI()
 
-from fastapi.middleware.cors import CORSMiddleware
-
-origins = [
-    "https://job-app-frontend-mu.vercel.app",  # Your actual frontend
-]
-
+# Enable CORS for Vercel frontend only
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://job-app-frontend-mu.vercel.app"],  # ✅ Your frontend domain
+    allow_origins=["https://job-app-frontend-mu.vercel.app"],  # Replace with your frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# Serve static files (PDF preview)
+
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
-# Set your OpenAI key
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# Cleanup old files
 def cleanup_old_files(directory, max_age_seconds=3600):
     now = time.time()
     for f in os.listdir(directory):
@@ -41,7 +34,6 @@ def cleanup_old_files(directory, max_age_seconds=3600):
         if os.path.isfile(path) and (now - os.path.getmtime(path)) > max_age_seconds:
             os.remove(path)
 
-# Models
 class JobSearch(BaseModel):
     jobKeywords: str
     location: str
@@ -53,7 +45,6 @@ class LetterRequest(BaseModel):
 class LetterContent(BaseModel):
     letter: str
 
-# Endpoints
 @app.post("/api/generate-letter")
 async def generate_letter(req: LetterRequest):
     cleanup_old_files(UPLOAD_DIR)
