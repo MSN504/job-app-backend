@@ -12,21 +12,24 @@ import urllib.parse
 
 app = FastAPI()
 
-# Enable CORS for Vercel frontend only
+# CORS setup
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://job-app-frontend-mu.vercel.app"],  # Replace with your frontend URL
+    allow_origins=["*"],  # Update this with your frontend domain for production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# File upload config
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
+# OpenAI API key
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
+# Cleanup function
 def cleanup_old_files(directory, max_age_seconds=3600):
     now = time.time()
     for f in os.listdir(directory):
@@ -34,6 +37,7 @@ def cleanup_old_files(directory, max_age_seconds=3600):
         if os.path.isfile(path) and (now - os.path.getmtime(path)) > max_age_seconds:
             os.remove(path)
 
+# Pydantic models
 class JobSearch(BaseModel):
     jobKeywords: str
     location: str
@@ -45,6 +49,7 @@ class LetterRequest(BaseModel):
 class LetterContent(BaseModel):
     letter: str
 
+# Endpoints
 @app.post("/api/generate-letter")
 async def generate_letter(req: LetterRequest):
     cleanup_old_files(UPLOAD_DIR)
