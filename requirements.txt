@@ -4,3 +4,4 @@ openai
 fpdf
 beautifulsoup4
 requests
+python-multipart
