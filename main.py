@@ -20,7 +20,7 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://job-app-frontend-mu.vercel.app"],  # ✅ your actual frontend URL
+    allow_origins=["https://job-app-frontend-mu.vercel.app"],  # ✅ Your frontend domain
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
