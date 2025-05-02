@@ -12,24 +12,23 @@ import urllib.parse
 
 app = FastAPI()
 
-# CORS setup
+# CORS middleware: allow only frontend origin
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Update this with your frontend domain for production
+    allow_origins=["https://job-app-frontend-mu.vercel.app"],  # Update this with your actual frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# File upload config
+# Serve static files
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
-# OpenAI API key
+# Load OpenAI key
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# Cleanup function
 def cleanup_old_files(directory, max_age_seconds=3600):
     now = time.time()
     for f in os.listdir(directory):
@@ -37,7 +36,7 @@ def cleanup_old_files(directory, max_age_seconds=3600):
         if os.path.isfile(path) and (now - os.path.getmtime(path)) > max_age_seconds:
             os.remove(path)
 
-# Pydantic models
+# Pydantic Models
 class JobSearch(BaseModel):
     jobKeywords: str
     location: str
@@ -49,7 +48,6 @@ class LetterRequest(BaseModel):
 class LetterContent(BaseModel):
     letter: str
 
-# Endpoints
 @app.post("/api/generate-letter")
 async def generate_letter(req: LetterRequest):
     cleanup_old_files(UPLOAD_DIR)
@@ -61,7 +59,7 @@ async def generate_letter(req: LetterRequest):
             max_tokens=600
         )
         letter = res['choices'][0]['message']['content'].strip()
-        return { "letter": letter }
+        return {"letter": letter}
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
@@ -77,7 +75,7 @@ async def convert_letter_to_pdf(data: LetterContent):
     for line in data.letter.split('\n'):
         pdf.multi_cell(0, 10, line)
     pdf.output(path)
-    return { "filename": filename }
+    return {"filename": filename}
 
 @app.post("/api/upload-documents")
 async def upload_documents(cv: UploadFile = File(...), additional: UploadFile = File(...), cover_letter: UploadFile = File(...)):
@@ -86,10 +84,9 @@ async def upload_documents(cv: UploadFile = File(...), additional: UploadFile = 
             path = os.path.join(UPLOAD_DIR, file.filename)
             with open(path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
-        return { "message": "Files uploaded successfully" }
+        return {"message": "Files uploaded successfully"}
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
-
 @app.post("/api/search-jobs")
 async def search_jobs(req: JobSearch):
     cleanup_old_files(UPLOAD_DIR)
@@ -112,6 +109,6 @@ async def search_jobs(req: JobSearch):
                     "location": location.text.strip() if location else "",
                     "link": "https://de.indeed.com" + link["href"] if link else ""
                 })
-        return { "results": jobs[:10] }
+        return {"results": jobs[:10]}
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
